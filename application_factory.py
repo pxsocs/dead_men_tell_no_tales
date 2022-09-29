@@ -157,7 +157,7 @@ def main(debug=False, reloader=False):
     # CLS + Welcome
     print("")
     print("")
-    print(yellow("Welcome to OrangeNomics <> Launching Application ..."))
+    print(yellow("Launching Application ..."))
     print("")
     print(f"[i] Running from directory: {current_path}")
     print("")
@@ -173,15 +173,12 @@ def main(debug=False, reloader=False):
     print("")
     logging.info("[Success] Served at: http://0.0.0.0:5001/")
 
-    print(fg.green("""
-        Project Salazar
-        """))
-
-    print(f"""
-                                    {yellow("Dead Men Tell No Tales")} {emoji.emojize(':skull:')}
-
-    ----------------------------------------------------------------
-                      [CTRL] + [C] to quit server
-    ----------------------------------------------------------------""")
+    print(
+        fg.green(f"""
+Project Salazar
+{yellow("Dead Men Tell No Tales")} {emoji.emojize(':skull:')}
+----------------------------------------------------------------
+                    [CTRL] + [C] to quit server
+----------------------------------------------------------------"""))
 
     return app
