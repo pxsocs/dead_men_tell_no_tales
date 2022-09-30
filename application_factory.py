@@ -49,7 +49,7 @@ def init_app():
     app.logger = logging.getLogger()
 
     # Create empty instance to store app variables
-    app.warden_status = {}
+    app.app_status = {'encryption_password': None}
 
     # Get Version
     with app.app_context():
@@ -76,7 +76,7 @@ def init_app():
     # Load config.ini
     if os.path.isfile(config_file) and config_settings.sections() != []:
         config_settings.read(config_file)
-        app.warden_status['initial_setup'] = False
+        app.app_status['initial_setup'] = False
         app.settings = config_settings
         print(
             success(
@@ -89,7 +89,7 @@ def init_app():
         create_config(config_file)
         config_settings.read(config_file)
         app.settings = config_settings
-        app.warden_status['initial_setup'] = True
+        app.app_status['initial_setup'] = True
 
     # Login Manager
 
