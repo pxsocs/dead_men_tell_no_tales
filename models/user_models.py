@@ -46,13 +46,11 @@ class EmailServers(db.Model):
     mail_server = db.Column(db.String(), default="smtp.googlemail.com")
     mail_port = db.Column(db.Integer, default=587)
     mail_use_tls = db.Column(db.Boolean, default=True)
+    mail_use_ssl = db.Column(db.Boolean, default=True)
     mail_username = db.Column(db.String(),
                               default=os.environ.get("EMAIL_USER"))
     mail_password = db.Column(db.String(),
                               default=os.environ.get("EMAIL_PASSWORD"))
-
-    def send_message(self):
-        pass
 
 
 # An Asset is a piece of data to be sent to a receiver or list of

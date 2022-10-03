@@ -5,14 +5,21 @@ app = main(debug=True, reloader=True)
 
 if __name__ == '__main__':
     import os
-    app.run(debug=True,
-            threaded=True,
-            host=app.settings['SERVER'].get('host'),
-            port=app.settings['SERVER'].getint('port'),
-            use_reloader=False)
+    from waitress import serve
+    # Production Server
+    serve(app,
+          host=app.settings['SERVER'].get('host'),
+          port=app.settings['SERVER'].getint('port'))
+
+    # Development Server -- Flask
+    # app.run(debug=True,
+    #         threaded=True,
+    #         host=app.settings['SERVER'].get('host'),
+    #         port=app.settings['SERVER'].getint('port'),
+    #         use_reloader=False)
 
     # ------------------------------
-    # Run after exiting Flask Server
+    # Run after exiting Server
     # ------------------------------
     print("Exiting...")
     from backend.config import Config

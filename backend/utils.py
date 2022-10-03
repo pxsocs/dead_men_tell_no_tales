@@ -3,6 +3,7 @@ import json
 import pickle
 import time
 import logging
+import socket
 import configparser
 from datetime import datetime
 from application_factory import current_path
@@ -36,10 +37,10 @@ def create_config(config_file):
 # Function to load and save data into pickles
 def pickle_it(action='load', filename=None, data=None):
     if filename is not None:
-        filename = 'dmtnt/' + filename
+        filename = '.dmtnt/' + filename
         filename = os.path.join(home_path(), filename)
     else:
-        filename = 'dmtnt/'
+        filename = '.dmtnt/'
         filename = os.path.join(home_path(), filename)
 
     # list all pkl files at directory
@@ -82,7 +83,7 @@ def pickle_it(action='load', filename=None, data=None):
 
 # Function to load and save data into json
 def json_it(action='load', filename=None, data=None):
-    filename = 'dmtnt/' + filename
+    filename = '.dmtnt/' + filename
     filename = os.path.join(home_path(), filename)
     if action == 'delete':
         try:
@@ -299,3 +300,18 @@ def get_image(domain):
     Returns the image for a given ticker
     """
     return "https://www.google.com/s2/favicons?domain=" + domain
+
+
+# Returns the average datetime from a datetime list
+def average_datetime(list_times):
+    df = pd.DataFrame(list_times, columns=['dates'])
+    avg = pd.to_datetime(df.dates.dropna().astype(np.int64).mean())
+    return avg
+
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(('8.8.8.8', 1))  # connect() for UDP doesn't send packets
+    local_ip_address = s.getsockname()[0]
+    pickle_it('save', 'local_ip_address.pkl', local_ip_address)
+    return (local_ip_address)

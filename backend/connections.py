@@ -21,7 +21,6 @@ def internet_connected(host="8.8.8.8", port=53, timeout=3):
         connected = True
     except socket.error as ex:
         connected = False
-    pickle_it('save', 'diags_internet_connected.pkl', connected)
     return (connected)
 
 
@@ -98,8 +97,6 @@ def test_tor():
         "port": "failed",
         "last_refresh": None,
     }
-
-    pickle_it('save', 'tor.pkl', response)
     session.close()
     return response
 

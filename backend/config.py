@@ -1,9 +1,10 @@
+from copyreg import pickle
 import os
 import configparser
 from pathlib import Path
 
 home_path = Path.home()
-home_dir = os.path.join(home_path, 'dmtnt')
+home_dir = os.path.join(home_path, '.dmtnt')
 save_status_dir = os.path.join(home_dir, 'save_status')
 try:
     os.mkdir(home_dir)
@@ -19,7 +20,7 @@ except Exception:
 # Creates a new config file if none exists by copying the default config.ini
 def create_config():
     basedir = os.path.abspath(os.path.dirname(__file__))
-    home_dir = os.path.join(home_path, 'dmtnt')
+    home_dir = os.path.join(home_path, '.dmtnt')
 
     default_config_file = os.path.join(basedir, 'config_default.ini')
     config_file = os.path.join(home_dir, 'config.ini')
@@ -39,9 +40,16 @@ def create_config():
 class Config:
     basedir = os.path.abspath(os.path.dirname(__file__))
     version_file = os.path.join(basedir, 'static/version.txt')
-    # You should change this secret key. But make sure it's done before any data
-    # is included in the database
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+
+    # Try top get the secret key from file
+    from backend.utils import pickle_it
+    s_key = pickle_it('load', 'secretKey.pkl')
+    if s_key == 'file not found':
+        # generate new secretKey
+        s_key = os.urandom(24)
+        pickle_it('save', 'secretKey.pkl', s_key)
+
+    SECRET_KEY = s_key
 
     SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(home_dir, "dmtnt.db")
 
@@ -55,13 +63,6 @@ class Config:
     file_config_file = Path(config_file)
     if not file_config_file.is_file():
         create_config()
-
-    # Used for notifications --- FUTURE FEATURE
-    MAIL_SERVER = "smtp.googlemail.com"
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
-    MAIL_USERNAME = os.environ.get("EMAIL_USER")
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
 
     # Pretty print json
     JSONIFY_PRETTYPRINT_REGULAR = True

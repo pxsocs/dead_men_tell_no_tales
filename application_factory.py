@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import atexit
 import warnings
 import emoji
 import configparser
@@ -74,13 +75,15 @@ def init_app():
     # Create empty instance of configparser
     config_settings = configparser.ConfigParser()
     # Load config.ini
-    if os.path.isfile(config_file) and config_settings.sections() != []:
+    if os.path.isfile(config_file):
         config_settings.read(config_file)
-        app.app_status['initial_setup'] = False
-        app.settings = config_settings
-        print(
-            success(
-                "✅ Config Loaded from config.ini - edit it for customization"))
+        if config_settings.sections() != []:
+            app.app_status['initial_setup'] = False
+            app.settings = config_settings
+            print(
+                success(
+                    "✅ Config Loaded from config.ini - edit it for customization"
+                ))
     else:
         print(
             error(
@@ -108,7 +111,7 @@ def init_app():
 
     # Check if home folder exists, if not create
     home = str(Path.home())
-    home_path = os.path.join(home, 'dmtnt/')
+    home_path = os.path.join(home, '.dmtnt/')
     try:
         os.makedirs(os.path.dirname(home_path))
     except Exception:
@@ -159,26 +162,119 @@ def main(debug=False, reloader=False):
     print("")
     print(yellow("Launching Application ..."))
     print("")
-    print(f"[i] Running from directory: {current_path}")
-    print("")
 
     app = init_app()
     app.app_context().push()
     app = create_loginmanager(app)
     app.app_context().push()
 
-    print("")
-    print(success("✅ Server is Ready..."))
-    print("Served at: http://0.0.0.0:5001/")
-    print("")
-    logging.info("[Success] Served at: http://0.0.0.0:5001/")
+    def close_running_threads(app):
+        print("")
+        print("")
+        print(yellow("[i] Please Wait... Shutting down."))
+        # Delete Debug File
+        try:
+            from backend.config import Config
+            os.remove(Config.debug_file)
+        except FileNotFoundError:
+            pass
+        # Breaks background jobs
+        # app.scheduler.shutdown(wait=False)
+        goodbye()
+        os._exit(1)
 
-    print(
-        fg.green(f"""
-Project Salazar
-{yellow("Dead Men Tell No Tales")} {emoji.emojize(':skull:')}
-----------------------------------------------------------------
-                    [CTRL] + [C] to quit server
-----------------------------------------------------------------"""))
+    # Register the def above to run at close
+    atexit.register(close_running_threads, app)
+
+    def onion_string():
+        from backend.utils import pickle_it
+        if app.settings['SERVER'].getboolean('onion_server'):
+            try:
+                pickle_it('save', 'onion_address.pkl',
+                          app.tor_service_id + '.onion')
+                return (f"""
+        {emoji.emojize(':onion:')} Tor Onion server running at:
+        {yellow(app.tor_service_id + '.onion')}
+                    """)
+            except Exception:
+                return (yellow("[!] Tor Onion Server Not Running"))
+        else:
+            return ('')
+
+    def local_network_string():
+        from backend.utils import get_local_ip
+        host = app.settings['SERVER'].get('host')
+        port = str(app.settings['SERVER'].getint('port'))
+        if host == '0.0.0.0':
+            return (f"""
+      Or through your network at address:
+      {yellow('http://')}{yellow(get_local_ip())}{yellow(f':{port}/')}
+                """)
+
+    port = app.settings['SERVER'].getint('port')
+
+    # Check if this port is available
+    from backend.utils import is_port_in_use
+    ports = [5000, 5001, 5002, 5003, 5004, 5005, 5006, 5007, 5008, 5009, 5010]
+    if is_port_in_use(port) is True:
+        # Ooops. Port in use... Let's try other ports...
+        for p in ports:
+            if is_port_in_use(p) is False:
+                print(
+                    warning(
+                        f"[i] Please note that port {str(port)} is in use."))
+                print(
+                    warning(
+                        f"[i] Port was automatically changed to {str(p)} which is free."
+                    ))
+                # Reassign port
+                port = p
+                app.settings['SERVER']['port'] = str(port)
+                break
+
+    print("")
+
+    print(f"""
+      Project Salazar
+      {yellow("Dead Men Tell No Tales")} {emoji.emojize(':skull:')}
+
+      {success("Server is Running")}
+      Open your browser and navigate to one of these addresses:
+      {yellow('http://localhost:' + str(port) + '/')}
+      {yellow('http://127.0.0.1:' + str(port) + '/')}
+      {local_network_string()}
+      {onion_string()}
+    ----------------------------------------------------------------
+                         CTRL + C to quit server
+    ----------------------------------------------------------------
+
+    """)
+
+    # Try to launch webbrowser and open the url
+    # try:
+    #     import webbrowser
+    #     webbrowser.open('http://localhost:' + str(port) + '/')
+    # except Exception:
+    #     pass
 
     return app
+
+
+def goodbye():
+    for n in range(0, 100):
+        print("")
+    print(
+        fg.brightgreen("""
+   \ \ / (_)_ _ ___ ___
+    \ V /| | '_/ -_|_-<
+     \_/ |_|_| \___/__/
+           (_)_ _
+    _  _   | | '  |         _
+   | \| |_ |_|_||_| ___ _ _(_)___
+   | .` | || | '  \/ -_) '_| (_-<
+   |_|\_|\_,_|_|_|_\___|_| |_/__/
+"""))
+
+    print("")
+    print(fg.brightgreen("    Server Stopped. Goodbye."))
+    print("")
