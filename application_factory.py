@@ -42,14 +42,15 @@ def init_app():
                         level=logging.INFO,
                         format=formatter,
                         datefmt='%m/%d/%Y %I:%M:%S %p')
-    logging.getLogger('apscheduler').setLevel(logging.WARNING)
-    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    logging.getLogger('apscheduler').setLevel(logging.CRITICAL)
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
     logging.info("Starting main program...")
 
     # Launch app & initial setup
     app = Flask(__name__)
     app.config.from_object(Config)
-    app.logger = logging.getLogger()
+    with app.app_context():
+        app.logger = logging.getLogger()
 
     # Create empty instance to store app variables
     app.app_status = {
@@ -301,7 +302,7 @@ def create_background_jobs(app):
     app.scheduler = BackgroundScheduler()
 
     # Create a timestamp every n seconds to attest that the app is running
-    INTERVAL = 60
+    INTERVAL = 3600
     app.scheduler.add_job(check_app_running,
                           'interval',
                           args=[app],
@@ -309,7 +310,7 @@ def create_background_jobs(app):
                           max_instances=1)
 
     # Check Internet Connection every 60 Seconds
-    INTERVAL = 60
+    INTERVAL = 3600
     app.scheduler.add_job(check_internet,
                           'interval',
                           args=[app],
