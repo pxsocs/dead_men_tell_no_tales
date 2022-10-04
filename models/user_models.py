@@ -53,6 +53,30 @@ class EmailServers(db.Model):
                               default=os.environ.get("EMAIL_PASSWORD"))
 
 
+# Health Check information
+# Creates a check point of health that can be displayed later
+# checks include internet connection, server status, node status, etc...
+class HealthCheck(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    check_time = db.Column(db.DateTime,
+                           nullable=False,
+                           default=datetime.utcnow())
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    check_type = db.Column(db.Text(), default=None)
+    data = db.Column(db.Text(), default=None)
+    additional_data = db.Column(db.PickleType(), default=None)
+
+    def as_dict(self):
+        dict_return = {
+            c.name: getattr(self, c.name)
+            for c in self.__table__.columns
+        }
+        return (dict_return)
+
+    def __repr__(self):
+        return (json.dumps(self.as_dict(), default=str))
+
+
 # An Asset is a piece of data to be sent to a receiver or list of
 # receivers. It could be an e-mail message, a file, a pre-signed Bitcoin TX,
 # or any other data that the user would like to send in case of a trigger event.

@@ -1,3 +1,5 @@
+from cmath import log
+from datetime import datetime
 import logging
 import os
 import sys
@@ -40,8 +42,8 @@ def init_app():
                         level=logging.INFO,
                         format=formatter,
                         datefmt='%m/%d/%Y %I:%M:%S %p')
-    logging.getLogger('apscheduler').setLevel(logging.CRITICAL)
-    logging.getLogger('werkzeug').setLevel(logging.INFO)
+    logging.getLogger('apscheduler').setLevel(logging.WARNING)
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
     logging.info("Starting main program...")
 
     # Launch app & initial setup
@@ -50,7 +52,10 @@ def init_app():
     app.logger = logging.getLogger()
 
     # Create empty instance to store app variables
-    app.app_status = {'encryption_password': None}
+    app.app_status = {
+        'encryption_password': None,
+        'launch_time': datetime.utcnow()
+    }
 
     # Get Version
     with app.app_context():
@@ -99,6 +104,8 @@ def init_app():
     with app.app_context():
         app = create_loginmanager(app)
         app = create_db(app)
+
+        # Register BluePrints
         from routes.errors.handlers import errors
         from routes.main.main import main
         from routes.main.jinja_filters import jinja_filters
@@ -108,6 +115,9 @@ def init_app():
         app.register_blueprint(errors)
         app.register_blueprint(jinja_filters)
         app.register_blueprint(api)
+
+        # Start Background Jobs
+        app = create_background_jobs(app)
 
     # Check if home folder exists, if not create
     home = str(Path.home())
@@ -152,10 +162,11 @@ def create_db(app):
     return (app)
 
 
-def main(debug=False, reloader=False):
+def main():
 
     # Make sure current libraries are found in path
     current_path = os.path.abspath(os.path.dirname(__file__))
+    logging.info(f'Running from directory: {current_path}')
 
     # CLS + Welcome
     print("")
@@ -278,3 +289,47 @@ def goodbye():
     print("")
     print(fg.brightgreen("    Server Stopped. Goodbye."))
     print("")
+
+
+def create_background_jobs(app):
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.events import EVENT_JOB_ERROR
+    # Start Schedulers for Background Tasks
+
+    from backend.health import check_internet, check_app_running
+
+    app.scheduler = BackgroundScheduler()
+
+    # Create a timestamp every n seconds to attest that the app is running
+    INTERVAL = 60
+    app.scheduler.add_job(check_app_running,
+                          'interval',
+                          args=[app],
+                          seconds=INTERVAL,
+                          max_instances=1)
+
+    # Check Internet Connection every 60 Seconds
+    INTERVAL = 60
+    app.scheduler.add_job(check_internet,
+                          'interval',
+                          args=[app],
+                          seconds=INTERVAL,
+                          max_instances=1)
+
+    # Add listener to catch errors on background jobs
+    def listener(event):
+        logging.info(
+            error(
+                f'Job {event.job_id} raised {event.exception.__class__.__name__}'
+            ))
+        logging.info(error(f'Job {event.job_id} raised {event.exception}'))
+        logging.info(error(f'Job {event.job_id} raised {event.traceback}'))
+
+    # Start listener
+    app.scheduler.add_listener(listener, EVENT_JOB_ERROR)
+
+    app.scheduler.start()
+    app.app_status['scheduler_initiated'] = True
+    print(success("✅ Background jobs running"))
+    print("")
+    return (app)
