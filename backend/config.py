@@ -36,11 +36,7 @@ def create_config():
     return (default_config)
 
 
-# Config class for Application Factory
-class Config:
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    version_file = os.path.join(basedir, 'static/version.txt')
-
+def load_key():
     # Try top get the secret key from file
     from backend.utils import pickle_it
     s_key = pickle_it('load', 'secretKey.pkl')
@@ -48,8 +44,15 @@ class Config:
         # generate new secretKey
         s_key = os.urandom(24)
         pickle_it('save', 'secretKey.pkl', s_key)
+    return (s_key)
 
-    SECRET_KEY = s_key
+
+# Config class for Application Factory
+class Config:
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    version_file = os.path.join(basedir, 'static/version.txt')
+
+    SECRET_KEY = load_key()
 
     SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(home_dir, "dmtnt.db")
 

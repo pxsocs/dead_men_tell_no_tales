@@ -28,7 +28,7 @@ from backend.ansi_management import (warning, success, error, info,
 # Application Factory
 def init_app():
 
-    from backend.config import Config
+    from backend.config import Config, load_key
     warnings.filterwarnings('ignore')
 
     # Config of Logging
@@ -53,8 +53,10 @@ def init_app():
         app.logger = logging.getLogger()
 
     # Create empty instance to store app variables
+    # These are only valid for the current run session
+    # i.e. as soon as the app is stopped, these will be cleared
     app.app_status = {
-        'encryption_password': None,
+        'encryption_key': load_key(),
         'launch_time': datetime.utcnow()
     }
 
@@ -297,7 +299,7 @@ def create_background_jobs(app):
     from apscheduler.events import EVENT_JOB_ERROR
     # Start Schedulers for Background Tasks
 
-    from backend.health import check_internet, check_app_running
+    from backend.health import check_internet, check_app_running, check_local_clock
 
     app.scheduler = BackgroundScheduler()
 
@@ -312,6 +314,14 @@ def create_background_jobs(app):
     # Check Internet Connection every 60 Seconds
     INTERVAL = 3600
     app.scheduler.add_job(check_internet,
+                          'interval',
+                          args=[app],
+                          seconds=INTERVAL,
+                          max_instances=1)
+
+    # Check local clock every day
+    INTERVAL = 60 * 60 * 12
+    app.scheduler.add_job(check_local_clock,
                           'interval',
                           args=[app],
                           seconds=INTERVAL,
